@@ -134,7 +134,7 @@ In order to determine duration at runtime, activity must implement interface [IC
 ```csharp
 ICompletionPromise CompletionPromise { get; }
 ```
-[CompletionPromise](Runtime/Contract/ITimeable.cs) is an object which knows when activity ends and may notify clients about it. The completion time clients receive in the callback is local to activity's timeline. Here is a sample implementation of composed activity:
+[CompletionPromise](Runtime/Contract/ITimeable.cs) is an object which knows when activity finishes and may notify clients about it, passing local completion time as an argument. Here is a sample implementation of composed activity:
 ```csharp
 public class DependentDuration : Activity<DependentDuration>, IComposedTimeable, ICompletionPromise, IDisposable
 {
