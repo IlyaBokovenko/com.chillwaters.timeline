@@ -197,7 +197,7 @@ There is an init option *CheckForTimeParadoxes* of **GlobalTimeline**. Usually i
 
 # Known Limitations #
 * Due to its design Timeline pre-simulates a huge activities flow in a single Push call. Although Timeline internals are greatly optimized, it still may cause a significant CPU/Memory spike in case modelled process is too complex. So, probably, it's not good idea to use Timeline in environments requiring stable FPS, or use it in a background thread. You can mitigate CPU spikes though by using [PushIteration](Runtime/GlobalTimeline.cs), which spreads the work overall several steps. 
-* Without **Purge** Timeline will grow in memory quickly. So it's client responsibility to periodically clean Timeline from obsolete actities.
+* Without **Purge** Timeline will grow in memory quickly. So it's client responsibility to periodically clean Timeline from obsolete activities.
 * Large activities flow may be hard to analyze and debug. I'm currently writing a visual tool for this but it's not ready for release yet.
 
 # To be done #
