@@ -203,6 +203,6 @@ There is an init option *CheckForTimeParadoxes* of **GlobalTimeline**. Usually i
 # To be done #
 * Polymorpic subscriptions. Subscription to parent class catches derived activities
 * Disposable activities subscription
-* Extract Timeline serialization to distinct package
+* Extract Timeline serialization into distinct package
 * Visual tool to analyze activities flow
 * Try to utilize ECS for better storage and concurrent activities computation (not sure it's possible)
