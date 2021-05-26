@@ -1,0 +1,17 @@
+{
+    "name": "com.chillwaters.timeline.runtime",
+    "rootNamespace": "",
+    "references": [
+        "GUID:1707f3515cf032b469eba52b448f8c9e",
+        "GUID:9f9634480e2ec774ca292e66f023e888"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
