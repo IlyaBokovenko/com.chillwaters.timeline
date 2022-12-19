@@ -4,8 +4,8 @@ Timeline was developed as a part of core tech in [Match2](https://www.gamedevelo
 * Highly optimized. As part of core tech stack of mobile application Timeline was greately optimized for perfomance and memory usage. It uses memory pools to reduce GC allocations and calcuation throttling to spread work over several steps ([DrainIteration](Runtime/GlobalTimeline.cs))
 * Deterministic. Timeline is based on long-precision integer arithmetics, so no rounding problems. Timeline internally uses stable sorted collections, so the same input always produces same results.
 * Incapsulated. Timeline is a container which can be cloned or serialized, and copy of Timeline will behave exactly the same as the originator.
-* Platform Indenendent. Timeline doesn't use any Unity classes (except for logs), so it can be used in any environment. It doesn't depend on any system timers or schedulers, although can be easely syncronized with one.
-* Self contained. Timeline framework doesn't depend on any third party libraries except for [Newtonsoft.Json](https://github.com/JamesNK/Newtonsoft.Json) for serialization
+* Platform Indenendent. Timeline doesn't use any Unity classes (except for logs which turned OFF by default), so it can be used in any environment. It doesn't depend on any system timers or schedulers, although can be easely syncronized with one.
+* Self contained. Timeline framework doesn't depend on any third party libraries besides those which come with Unity.
 * Serialized. Thanks to Newtonsoft.Json serializer complemented with a couple of custom [Json converters](Runtime/Timeline+Serialization.cs), Timeline is serializable to optimized and human-readable json format. Being deserialized, Timeline copy is an exact copy of it's originator.
 * Supports state hash calculation. Timeline supports interfaces for hashing it's state and state of it's activities. Also some efforts are put to simplify tracing of hash mismatches.
 * Server-friendly. Due to the features stated above Timeline can be used on server side and keep it synchronized with client.
