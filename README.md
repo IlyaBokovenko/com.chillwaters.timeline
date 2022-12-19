@@ -13,6 +13,16 @@ Timeline was developed as a part of core tech in [Match2](https://www.gamedevelo
 * Use Unity Package Manager to add package using Git URL
 
 # Usage #
+## Example ##
+There is an Example package in package root folder Packages/CW Timeline
+Import it in the project and Select menu CW Timeline / Open Timeline Visualizer
+You'll see a window with a visualization of example timeline. It demonstrates various activities hierarchy with durations, labels and timecodes
+In this window you can:
+* Click on activity to see it's relations
+* Use search field to search activity by description
+* Save/Load timeline into JSON
+* Compare 2 timelines 
+
 ## Basic Concepts ##
 [Activity](Runtime/Activity.cs) - a worker unit of timeline. It's a base class for all timeline activities. It implements interface ITimeable in which client should override Apply function which is body of activity for making some useful work. Apply is executed when timeline reaches the moment at which activity was pushed. After that all subscriptions to this activity are triggered.
 ```csharp
