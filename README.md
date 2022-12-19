@@ -16,7 +16,7 @@ Timeline was developed as a part of core tech in [Match2](https://www.gamedevelo
 ## Example ##
 There is an Example package in package root folder Packages/CW Timeline
 
-Import it in the project and Select menu CW Timeline / Open Timeline Visualizer
+Import it in the project and select menu CW Timeline / Open Timeline Visualizer
 
 You'll see a window with a visualization of example timeline. It demonstrates various activities hierarchy with durations, labels and timecodes
 In this window you can:
