@@ -2,7 +2,6 @@
     "name": "com.chillwaters.timeline.editor.tests",
     "rootNamespace": "",
     "references": [
-        "GUID:560b04d1a97f54a4e82edc0cbbb69285",
         "GUID:9f9634480e2ec774ca292e66f023e888",
         "GUID:433ffb0b361d64446b1b56926d2dcaab"
     ],

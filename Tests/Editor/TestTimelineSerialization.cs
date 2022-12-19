@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using CW.Core.Hash;
 using CW.Core.Timeline.Serialization;
 using Newtonsoft.Json;
@@ -14,6 +14,7 @@ namespace CW.Core.Timeline.Tests
         [SetUp]
         public void SetUp()
         {
+            GlobalTimeline.SetPoolingPolicy(TimelinePoolingPolicy.Client);
             timeline = new GlobalTimeline(options: GlobalTimeline.Options.Manual);
         }
 
@@ -23,12 +24,12 @@ namespace CW.Core.Timeline.Tests
             var hash = timeline.ComputeHash();
             Assert.That(hash, Is.EqualTo(timeline.ComputeHash()));
             
-            timeline.Push(new TestSerializableTimeable(1, "aaa"), TLTime.FromSeconds(1f));
+            timeline.Push(new TestSerializableTimeable(1, "aaa"), TlTime.FromSeconds(1f));
             Assert.That(hash, Is.Not.EqualTo(timeline.ComputeHash()));
             hash = timeline.ComputeHash();
             Assert.That(hash, Is.EqualTo(timeline.ComputeHash()));
             
-            timeline.Push(new TestSerializableTimeable(2, "bbb"), TLTime.FromSeconds(2f));
+            timeline.Push(new TestSerializableTimeable(2, "bbb"), TlTime.FromSeconds(2f));
             Assert.That(hash, Is.Not.EqualTo(timeline.ComputeHash()));
 
             var bw = new TracingHashWriter();
@@ -47,7 +48,7 @@ namespace CW.Core.Timeline.Tests
             hash = timeline.ComputeHash();
             Assert.That(hash, Is.EqualTo(timeline.ComputeHash()));
             
-            timeline.Advance(TLTime.FromSeconds(2f));
+            timeline.Advance(TlTime.FromSeconds(2f));
             Assert.That(hash, Is.Not.EqualTo(timeline.ComputeHash()));
             hash = timeline.ComputeHash();
             Assert.That(hash, Is.EqualTo(timeline.ComputeHash()));
@@ -56,21 +57,21 @@ namespace CW.Core.Timeline.Tests
         [Test]
         public void TestUnhashableThrows()
         {
-            timeline.Push(new UnhashableTimeable(), TLTime.FromSeconds(1f));
+            timeline.Push(new UnhashableTimeable(), TlTime.FromSeconds(1f));
             Assert.Throws<TimelineException>(() => timeline.ComputeHash());
         }
 
         [Test]
         public void TestLambdaThrows()
         {
-            timeline.Push(new ActivityWithLambda(), TLTime.FromSeconds(1f));
+            timeline.Push(new ActivityWithLambda(), TlTime.FromSeconds(1f));
             Assert.Throws<TimelineException>(() => timeline.ComputeHash());
         }
 
         [Test]
         public void TestLocalFunctionThrows()
         {
-            timeline.Push(new ActivityWithLocalFunction(), TLTime.FromSeconds(1f));
+            timeline.Push(new ActivityWithLocalFunction(), TlTime.FromSeconds(1f));
             Assert.Throws<TimelineException>(() => timeline.ComputeHash());
         }
 
@@ -151,8 +152,8 @@ namespace CW.Core.Timeline.Tests
         public void TestSerialization()
         {
             var t = new SerializableTimeableWithCallback("t");
-            timeline.Push(t, TLTime.FromSeconds(1f));
-            timeline.Advance(TLTime.FromSeconds(1f));
+            timeline.Push(t, TlTime.FromSeconds(1f));
+            timeline.Advance(TlTime.FromSeconds(1f));
             
             string json = JsonConvert.SerializeObject(timeline, Formatting.Indented, CreateSettings());
             
@@ -177,8 +178,8 @@ namespace CW.Core.Timeline.Tests
         public void TestSelfSubscribeSerialization()
         {
             var t = new SelfSubscribingActivity();
-            timeline.Push(t, TLTime.FromSeconds(1f));
-            timeline.Advance(TLTime.FromSeconds(1f));
+            timeline.Push(t, TlTime.FromSeconds(1f));
+            timeline.Advance(TlTime.FromSeconds(1f));
             
             string json = JsonConvert.SerializeObject(timeline, Formatting.Indented, CreateSettings());
             Debug.Log(json);
@@ -208,14 +209,14 @@ namespace CW.Core.Timeline.Tests
         public void Test2SubscriptionsOnCompletionOfOneActivity()
         {
             var target = new TestSerializableTimeable("a");
-            timeline.Push(target, TLTime.FromSeconds(3f));
+            timeline.Push(target, TlTime.FromSeconds(3f));
             
             var subscriber1 = new SubscribeToOther(target);
-            timeline.Push(subscriber1, TLTime.FromSeconds(1f));
+            timeline.Push(subscriber1, TlTime.FromSeconds(1f));
             var subscriber2 = new SubscribeToOther(target);
-            timeline.Push(subscriber2, TLTime.FromSeconds(1f));
+            timeline.Push(subscriber2, TlTime.FromSeconds(1f));
             
-            timeline.Advance(TLTime.FromSeconds(1f));
+            timeline.Advance(TlTime.FromSeconds(1f));
             
             Assert.DoesNotThrow(() =>  JsonConvert.SerializeObject(timeline, Formatting.Indented, CreateSettings()));
         }
@@ -230,7 +231,7 @@ namespace CW.Core.Timeline.Tests
         {
             var settings = new JsonSerializerSettings {PreserveReferencesHandling = PreserveReferencesHandling.Objects};
             var activity = new TestSerializableTimeable(1, "aaa");
-            timeline.Push(activity, TLTime.FromSeconds(3f));
+            timeline.Push(activity, TlTime.FromSeconds(3f));
             string json = JsonConvert.SerializeObject(activity, Formatting.Indented, settings);
 
             Debug.Log(json);
@@ -246,8 +247,8 @@ namespace CW.Core.Timeline.Tests
             a1.activity = a2;
             a2.activity = a1;
             
-            timeline.Push(a1, TLTime.FromMilliseconds(1000));
-            timeline.Push(a2, TLTime.FromMilliseconds(2000));
+            timeline.Push(a1, TlTime.FromMilliseconds(1000));
+            timeline.Push(a2, TlTime.FromMilliseconds(2000));
 
             var serializer = TimelineJsonSerializator.CreatePretty();
 
@@ -259,20 +260,20 @@ namespace CW.Core.Timeline.Tests
         [JsonObject(MemberSerialization = MemberSerialization.OptIn)]
         private class TestComposedActivity : Activity<TestComposedActivity>, IComposedTimeable, IContentHash
         {
-            private TestCompletionPromise _promise = new TestCompletionPromise();
+            private CompletionPromise _promise = new CompletionPromise();
             public ICompletionPromise CompletionPromise => _promise;
 
             [JsonProperty]
-            private TLTime _duration;
+            private TlTime _duration;
 
-            public TestComposedActivity(TLTime duration)
+            public TestComposedActivity(TlTime duration)
             {
                 _duration = duration;
             }
 
             public override void Apply() 
             {
-                _promise.Finish(_duration);
+                _promise.Complete(_duration);
             }
 
             public void WriteContentHash(ITracingHashWriter writer){}
@@ -281,8 +282,8 @@ namespace CW.Core.Timeline.Tests
         [Test]
         public void TestSerializeComposedActivity()
         {
-            var activity = new TestComposedActivity(1000L.TLMilliseconds());
-            timeline.Push(activity, 500L.TLMilliseconds());
+            var activity = new TestComposedActivity(1000l.TLMilliseconds());
+            timeline.Push(activity, 500l.TLMilliseconds());
 
             var json = JsonConvert.SerializeObject(timeline, CreateSettings());
             timeline = JsonConvert.DeserializeObject<GlobalTimeline>(json, CreateSettings());
@@ -291,7 +292,7 @@ namespace CW.Core.Timeline.Tests
             var deserializedActivity = timeline.ActivityById(activity.Id);
             timeline.Subscribe(deserializedActivity.MakeCompletionMarker(), _ => triggered = true);
             
-            timeline.Advance(2000L.TLMilliseconds());
+            timeline.Advance(2000l.TLMilliseconds());
             Assert.True(triggered);
         }
 
@@ -389,7 +390,7 @@ namespace CW.Core.Timeline.Tests
             public override void Apply()
             {
                 var test = new TestSerializableTimeable("test");
-                Timeline.Push(test, TLTime.FromSeconds(1f));
+                Timeline.Push(test, TlTime.FromSeconds(1f));
                 Timeline.Subscribe(test, Callback);
                 Timeline.Subscribe<TestSerializableTimeable>(Callback);
             }
@@ -412,7 +413,7 @@ namespace CW.Core.Timeline.Tests
 
         private class SelfSubscribingActivity : Activity<SelfSubscribingActivity>, ISimpleTimeable, IContentHash
         {
-            public TLTime Duration => TLTime.FromSeconds(1f);
+            public TlTime Duration => TlTime.FromSeconds(1f);
 
             public override void Apply()
             {
@@ -443,7 +444,7 @@ namespace CW.Core.Timeline.Tests
                 id = s_lastId++;
             }
 
-            public TLTime Duration => TLTime.FromMilliseconds(1000);
+            public TlTime Duration => TlTime.FromMilliseconds(1000);
             
             public override void Apply()
             {

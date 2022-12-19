@@ -1,8 +1,7 @@
-﻿using NUnit.Framework;
+using NUnit.Framework;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using CW.Core.Timeline;
 
 namespace CW.Core.Timeline.Tests
 {
@@ -15,6 +14,7 @@ namespace CW.Core.Timeline.Tests
         [SetUp]
         public void SetUp()
         {
+            GlobalTimeline.SetPoolingPolicy(TimelinePoolingPolicy.Client);
             timeline = new GlobalTimeline(options: GlobalTimeline.Options.Auto);
             applyOrder = new List<ITimeable>();
             publishOrder = new List<ITimeable>();
@@ -23,8 +23,8 @@ namespace CW.Core.Timeline.Tests
         [Test]
         public void TestSubscriberCalled()
         {
-            TLTime expectedTime = TLTime.FromSeconds(3f);
-            TLTime resultTime = TLTime.Zero;
+            TlTime expectedTime = TlTime.FromSeconds(3f);
+            TlTime resultTime = TlTime.Zero;
             var timeable = TestTimeable.Empty();
 
             timeline.Subscribe<TestTimeable>(t => resultTime = timeline.Offset(t));
@@ -39,11 +39,11 @@ namespace CW.Core.Timeline.Tests
             var later = EmptyTimeable();
             var parent = TimeableWithApply(_ =>
             {
-                timeline.Push(later, TLTime.FromSeconds(5f));
-                timeline.Push(earlier, TLTime.FromSeconds(3f));
+                timeline.Push(later, TlTime.FromSeconds(5f));
+                timeline.Push(earlier, TlTime.FromSeconds(3f));
             });
 
-            timeline.Push(parent, TLTime.FromMilliseconds(0));
+            timeline.Push(parent, TlTime.FromMilliseconds(0));
 
             Assert.That(applyOrder, Is.EqualTo(new[] { parent, earlier, later }));
         }
@@ -58,15 +58,15 @@ namespace CW.Core.Timeline.Tests
 
             var parent = TimeableWithApply(_ =>
             {
-                timeline.Push(t1_1, TLTime.FromSeconds(1f));
-                timeline.Push(t1_2, TLTime.FromSeconds(1f));
-                timeline.Push(t2, TLTime.FromSeconds(2f));
-                timeline.Push(t1_3, TLTime.FromSeconds(1f));
+                timeline.Push(t1_1, TlTime.FromSeconds(1f));
+                timeline.Push(t1_2, TlTime.FromSeconds(1f));
+                timeline.Push(t2, TlTime.FromSeconds(2f));
+                timeline.Push(t1_3, TlTime.FromSeconds(1f));
             });
 
             Subscribe<TestTimeable>();
 
-            timeline.Push(parent, TLTime.FromMilliseconds(0));
+            timeline.Push(parent, TlTime.FromMilliseconds(0));
 
             Assert.That(applyOrder, Is.EqualTo(new[] { parent, t1_1, t1_2, t1_3, t2 }));
             Assert.That(publishOrder, Is.EqualTo(new[] { parent, t1_1, t1_2, t1_3, t2 }));
@@ -81,8 +81,8 @@ namespace CW.Core.Timeline.Tests
 
             Subscribe(t2);
 
-            timeline.Push(t1, TLTime.FromSeconds(1f));
-            timeline.Push(t2, TLTime.FromSeconds(1f));
+            timeline.Push(t1, TlTime.FromSeconds(1f));
+            timeline.Push(t2, TlTime.FromSeconds(1f));
 
             Assert.That(publishOrder.Count == 1 && publishOrder[0] == t2);
         }
@@ -91,11 +91,11 @@ namespace CW.Core.Timeline.Tests
         public void TestLocaltimelineOffset()
         {
             var t = EmptyTimeable();
-            var composed = ComposedWithApply(timeable => timeable.Timeline.Push(t, TLTime.FromSeconds(2f)));
+            var composed = ComposedWithApply(timeable => timeable.Timeline.Push(t, TlTime.FromSeconds(2f)));
 
-            timeline.Push(composed, TLTime.FromSeconds(3f));
+            timeline.Push(composed, TlTime.FromSeconds(3f));
 
-            Assert.AreEqual(timeline.Offset(t), TLTime.FromSeconds(5f));
+            Assert.AreEqual(timeline.Offset(t), TlTime.FromSeconds(5f));
         }
 
         [Test]
@@ -105,10 +105,10 @@ namespace CW.Core.Timeline.Tests
             var test = EmptyTimeable();
             var child = ComposedWithApply(t =>
             {
-                t.Timeline.Push(test, TLTime.FromMilliseconds(0));
+                t.Timeline.Push(test, TlTime.FromMilliseconds(0));
                 t.Timeline.Subscribe(test, _ => subscribeAfterPushFires = true);
             });
-            timeline.Push(child, TLTime.FromMilliseconds(0));
+            timeline.Push(child, TlTime.FromMilliseconds(0));
             Assert.That(subscribeAfterPushFires, "subscribeAfterPushFires");
         }
 
@@ -119,27 +119,27 @@ namespace CW.Core.Timeline.Tests
             timeline = tl;
 
             var t1 = EmptyTimeable();
-            timeline.Push(t1, TLTime.FromSeconds(1f));
+            timeline.Push(t1, TlTime.FromSeconds(1f));
             var t2 = EmptyTimeable();
-            timeline.Push(t2, TLTime.FromSeconds(3f));
+            timeline.Push(t2, TlTime.FromSeconds(3f));
             
             Assert.That(applyOrder, Is.Empty);
-            tl.Advance(TLTime.FromSeconds(0.5f));
+            tl.Advance(TlTime.FromSeconds(0.5f));
             Assert.That(applyOrder, Is.Empty);
-            tl.Advance(TLTime.FromSeconds(1f));
+            tl.Advance(TlTime.FromSeconds(1f));
             Assert.That(applyOrder, Is.EqualTo(new[]{t1}));
-            tl.Advance(TLTime.FromSeconds(2f));
+            tl.Advance(TlTime.FromSeconds(2f));
             Assert.That(applyOrder, Is.EqualTo(new[]{t1}));
-            tl.Advance(TLTime.FromSeconds(3f));
+            tl.Advance(TlTime.FromSeconds(3f));
             Assert.That(applyOrder, Is.EqualTo(new[]{t1, t2}));
-            tl.Advance(TLTime.FromSeconds(4f));
+            tl.Advance(TlTime.FromSeconds(4f));
             Assert.That(applyOrder, Is.EqualTo(new[]{t1, t2}));
         }
 
         [Test]
         public void TestCantAdvanceAutoTimeline()
         {
-            Assert.Throws<TimelineException>(() => (timeline as GlobalTimeline).Advance(TLTime.FromSeconds(10f)));
+            Assert.Throws<TimelineException>(() => (timeline as GlobalTimeline).Advance(TlTime.FromSeconds(10f)));
         }
 
         #region Completion
@@ -148,35 +148,35 @@ namespace CW.Core.Timeline.Tests
         public void TestCompletionInstant()
         {
             var t = EmptyTimeable();
-            var completeTime = TLTime.FromSeconds(0f);
+            var completeTime = TlTime.FromSeconds(0f);
             timeline.Subscribe<Completed<TestTimeable>>(completed => completeTime = timeline.Offset(completed));
-            timeline.Push(t, TLTime.FromSeconds(3f));
-            Assert.That(completeTime, Is.EqualTo(TLTime.FromSeconds(3f)));
+            timeline.Push(t, TlTime.FromSeconds(3f));
+            Assert.That(completeTime, Is.EqualTo(TlTime.FromSeconds(3f)));
         }
 
         [Test]
         public void TestCompletionWithDuration()
         {
-            var t = EmptySimple(TLTime.FromSeconds(3f));
+            var t = EmptySimple(TlTime.FromSeconds(3f));
 
             Subscribe<Completed<TestSimpleTimeable>>();
 
-            timeline.Push(t, TLTime.FromSeconds(2f));
+            timeline.Push(t, TlTime.FromSeconds(2f));
 
             Assert.That(publishOrder.Count, Is.EqualTo(1));
-            Assert.AreEqual(timeline.Offset(publishOrder[0]), TLTime.FromSeconds(5f));
+            Assert.AreEqual(timeline.Offset(publishOrder[0]), TlTime.FromSeconds(5f));
         }
 
         [Test]
         public void TestCompletionComposed()
         {
-            var composed = ComposedWithApply(timeable => { timeable.Finish(TLTime.FromSeconds(5f)); });
+            var composed = ComposedWithApply(timeable => { timeable.completionPromise.Complete(TlTime.FromSeconds(5f)); });
 
             Subscribe<Completed<TestComposedTimeable>>();
 
-            timeline.Push(composed, TLTime.FromSeconds(2f));
+            timeline.Push(composed, TlTime.FromSeconds(2f));
 
-            Assert.AreEqual(timeline.Offset(publishOrder.Last()), TLTime.FromSeconds(7f));
+            Assert.AreEqual(timeline.Offset(publishOrder.Last()), TlTime.FromSeconds(7f));
         }
 
         [Test]
@@ -185,7 +185,7 @@ namespace CW.Core.Timeline.Tests
             Activity test = EmptyTimeable(); // client might not know exact type of the activity (for instance DependencyWaiter)
             bool completeCaught = false;
             timeline.Subscribe(test.CompleteMarker(), completed => completeCaught = true);
-            timeline.Push(test, TLTime.FromMilliseconds(0));
+            timeline.Push(test, TlTime.FromMilliseconds(0));
             Assert.That(completeCaught, "completeCaught");
         }
 
@@ -227,8 +227,8 @@ namespace CW.Core.Timeline.Tests
 
             var timeable = ComposedWithApply(t =>
             {
-                t.Timeline.Push(test, TLTime.FromSeconds(0f));
-                t.Timeline.Push(child, TLTime.FromSeconds(0f));
+                t.Timeline.Push(test, TlTime.FromSeconds(0f));
+                t.Timeline.Push(child, TlTime.FromSeconds(0f));
                 t.Timeline.Subscribe(test, _ => publishedInOwnTimeline = true);
             });
 
@@ -238,8 +238,8 @@ namespace CW.Core.Timeline.Tests
             });
 
             timeline.Subscribe(test, _ => publishedInParentTimeline = true);
-            timeline.Push(sibling, TLTime.FromSeconds(0f));
-            timeline.Push(timeable, TLTime.FromSeconds(0f));
+            timeline.Push(sibling, TlTime.FromSeconds(0f));
+            timeline.Push(timeable, TlTime.FromSeconds(0f));
 
             Assert.That(publishedInParentTimeline, Is.True, "parent");
             Assert.That(publishedInOwnTimeline, Is.True, "own");
@@ -254,9 +254,9 @@ namespace CW.Core.Timeline.Tests
             
             var hitler = EmptyTimeable();
             var hitlerKiller = EmptyTimeable();
-            var t = SimpleWithApply(TLTime.FromSeconds(5f), timeable => timeline.Push(hitler, TLTime.FromSeconds(4f)));
-            timeline.Subscribe(t.CompleteMarker(), completed => timeline.Push(hitlerKiller, TLTime.FromSeconds(3f)));
-            Assert.That(() => timeline.Push(t, TLTime.FromMilliseconds(0)), Throws.TypeOf<TimeParadoxException>());
+            var t = SimpleWithApply(TlTime.FromSeconds(5f), timeable => timeline.Push(hitler, TlTime.FromSeconds(4f)));
+            timeline.Subscribe(t.CompleteMarker(), completed => timeline.Push(hitlerKiller, TlTime.FromSeconds(3f)));
+            Assert.That(() => timeline.Push(t, TlTime.FromMilliseconds(0)), Throws.TypeOf<TimeParadoxException>());
             
             timeline.SetCheckForTimeParadoxes(CheckForTimeParadoxesEnum.DontCheck);         
         }
@@ -296,10 +296,10 @@ namespace CW.Core.Timeline.Tests
                 t.Timeline.Subscribe(test, _ => secondChildByInstanceWorked = true);
                 t.Timeline.Subscribe<TestTimeable>(_ => childGroupedByTypeWorked = true, "c");
                 t.Timeline.Subscribe(test, _ => childGroupedByInstanceWorked = true, "d");
-                t.Timeline.Push(test, TLTime.FromMilliseconds(0));
+                t.Timeline.Push(test, TlTime.FromMilliseconds(0));
             });
 
-            timeline.Push(child, TLTime.FromMilliseconds(0));
+            timeline.Push(child, TlTime.FromMilliseconds(0));
 
             Assert.That(parentByTypeWorked, "parentByTypeWorked");
             Assert.That(parentByInstanceWorked, "parentByInstanceWorked");
@@ -329,7 +329,7 @@ namespace CW.Core.Timeline.Tests
             bool typedCalled = false, instanceCalled = false;
             Subscribe<TestTimeable>(_ => typedCalled = true, "another");
             Subscribe(test, _ => instanceCalled = true, "another");
-            timeline.Push(test, TLTime.FromMilliseconds(0));
+            timeline.Push(test, TlTime.FromMilliseconds(0));
             Assert.That(typedCalled, Is.False, "typedCalled");
             Assert.That(instanceCalled, Is.True, "instanceCalled");
         }
@@ -352,7 +352,7 @@ namespace CW.Core.Timeline.Tests
 
             var child = ComposedWithApply(t =>
             {
-                t.Timeline.Push(test, TLTime.FromMilliseconds(0));
+                t.Timeline.Push(test, TlTime.FromMilliseconds(0));
                 if (childIsInstance)
                 {
                     t.Timeline.Subscribe(test, _ => childCalled = true, "some");
@@ -362,7 +362,7 @@ namespace CW.Core.Timeline.Tests
                     t.Timeline.Subscribe<TestTimeable>(_ => childCalled = true, "some");
                 }
             });
-            timeline.Push(child, TLTime.FromMilliseconds(0));
+            timeline.Push(child, TlTime.FromMilliseconds(0));
             Assert.That(!parentCalled && childCalled, $"child {(childIsInstance ? "instance" : "typed")} overrides parent {(parentIsInstance ? "instance" : "typed")}");
         }
 
@@ -377,11 +377,11 @@ namespace CW.Core.Timeline.Tests
             timeline.Subscribe<TestTimeable>(timeable => parentCalls.Add(timeable), "some");
             var child = ComposedWithApply(t =>
             {
-                t.Timeline.Push(test, TLTime.Zero);
-                t.Timeline.Push(test2, TLTime.Zero);
+                t.Timeline.Push(test, TlTime.Zero);
+                t.Timeline.Push(test2, TlTime.Zero);
                 t.Timeline.Subscribe(test, _ => childCalled = true, "some");
             });
-            timeline.Push(child, TLTime.Zero);
+            timeline.Push(child, TlTime.Zero);
             Assert.That(childCalled, "childCalled");
             Assert.That(parentCalls.Count, Is.EqualTo(1), "parentCalls.Count == 1");
             Assert.That(parentCalls[0], Is.EqualTo(test2), "parent subscription called for test2");
@@ -404,12 +404,12 @@ namespace CW.Core.Timeline.Tests
             });
         }
 
-        private TestSimpleTimeable EmptySimple(TLTime duration)
+        private TestSimpleTimeable EmptySimple(TlTime duration)
         {
             return SimpleWithApply(duration, null);
         }
 
-        private TestSimpleTimeable SimpleWithApply(TLTime duration, Action<TestSimpleTimeable> action)
+        private TestSimpleTimeable SimpleWithApply(TlTime duration, Action<TestSimpleTimeable> action)
         {
             return TestSimpleTimeable.WithApply(duration, timeable =>
             {

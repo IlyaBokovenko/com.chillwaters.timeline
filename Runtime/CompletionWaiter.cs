@@ -5,40 +5,40 @@ namespace CW.Core.Timeline
 {
     public class CompletionWaiter : ICompletionPromise
     {
-        private event Action<TLTime> completionPromise;
-        private ITimeline timeline;
+        private CompletionPromise _completionPromise = new CompletionPromise();
+        
+        private ITimeline _timeline;
 
-        private HashSet<Activity> dependencies = new HashSet<Activity>();
-        private bool isCompleted;
-        bool isClosed = true;
-        TLTime? lastCompletionTime;
+        private HashSet<Activity> _dependencies = new HashSet<Activity>();
+        private bool _isCompleted;
+        bool _isClosed = true;
+        TlTime? _lastCompletionTime;
 
-        public IDisposable Subscribe(Action<TLTime> observer)
+        public IDisposable Subscribe(Action<TlTime> callback)
         {
-            completionPromise += observer;
-            return new CompletionWaiterDisposable(this, observer);
+            return _completionPromise.Subscribe(callback);
         }
 
         public CompletionWaiter(ITimeline timeline)
         {
-            this.timeline = timeline;
+            this._timeline = timeline;
         }
 
         public CompletionWaiter Opened()
         {
-            isClosed = false;
+            _isClosed = false;
             return this;
         }
 
         public CompletionWaiter Close()
         {
-            isClosed = true;
-            if (dependencies.Count == 0 && lastCompletionTime.HasValue)
+            _isClosed = true;
+            if (_dependencies.Count == 0 && _lastCompletionTime.HasValue)
             {
-                if (!isCompleted)
+                if (!_isCompleted)
                 {
-                    isCompleted = true;
-                    completionPromise?.Invoke(lastCompletionTime.Value);
+                    _isCompleted = true;
+                    _completionPromise.Complete(_lastCompletionTime.Value);
                 }
             }
 
@@ -48,57 +48,40 @@ namespace CW.Core.Timeline
 
         public void AddDependency<T>(T dependency) where T : Activity
         {
-            dependencies.Add(dependency);
-            timeline.Subscribe(dependency.CompleteMarker(), OnDependencyComplete);
+            _dependencies.Add(dependency);
+            _timeline.Subscribe(dependency.CompleteMarker(), OnDependencyComplete);
         }
 
         void OnDependencyComplete<T>(Completed<T> completed) where T : Activity
         {
-            timeline.Unsubscribe(completed, OnDependencyComplete);
+            _timeline.Unsubscribe(completed, OnDependencyComplete);
             
-            TLTime time = timeline.Offset(completed);
+            TlTime time = _timeline.Offset(completed);
             Activity dependency = completed.Activity;
-            lastCompletionTime = time;
-            dependencies.Remove(dependency);
-            if (dependencies.Count == 0)
+            _lastCompletionTime = time;
+            _dependencies.Remove(dependency);
+            if (_dependencies.Count == 0)
             {
-                if (isClosed)
+                if (_isClosed)
                 {
-                    isCompleted = true;
-                    completionPromise?.Invoke(time);
+                    _isCompleted = true;
+                    _completionPromise.Complete(_lastCompletionTime.Value);
                 }
             }
         }
 
-        public void CompleteIfEmpty(TLTime time)
+        public void CompleteIfEmpty(TlTime time)
         {
             Close();
 
-            if (isCompleted)
+            if (_isCompleted)
             {
                 return;
             }
 
-            if (dependencies.Count == 0)
+            if (_dependencies.Count == 0)
             {
-                completionPromise?.Invoke(time);
-            }
-        }
-
-        private struct CompletionWaiterDisposable : IDisposable
-        {
-            private CompletionWaiter _waiter;
-            private Action<TLTime> _subject;
-
-            public CompletionWaiterDisposable(CompletionWaiter waiter, Action<TLTime> subject)
-            {
-                _waiter = waiter;
-                _subject = subject;
-            }
-
-            public void Dispose()
-            {
-                _waiter.completionPromise -= _subject;
+                _completionPromise.Complete(_lastCompletionTime.Value);
             }
         }
     }

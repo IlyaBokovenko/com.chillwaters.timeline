@@ -1,6 +1,4 @@
-﻿using System;
-
-[assembly:System.Runtime.CompilerServices.InternalsVisibleTo("Unity.Timeline.EditorTests")]
+using System;
 
 namespace CW.Core.Timeline.Tests
 {
@@ -33,21 +31,21 @@ namespace CW.Core.Timeline.Tests
     {
         private Action<TestSimpleTimeable> action;
 
-        private TLTime duration;
-        public TLTime Duration => duration;
+        private TlTime duration;
+        public TlTime Duration => duration;
 
-        private TestSimpleTimeable(TLTime duration, Action<TestSimpleTimeable> action)
+        private TestSimpleTimeable(TlTime duration, Action<TestSimpleTimeable> action)
         {
             this.duration = duration;
             this.action = action;
         }
 
-        public static TestSimpleTimeable WithApply(TLTime duration, Action<TestSimpleTimeable> action)
+        public static TestSimpleTimeable WithApply(TlTime duration, Action<TestSimpleTimeable> action)
         {
             return new TestSimpleTimeable(duration, action);
         }
 
-        public static TestSimpleTimeable Empty(TLTime duration)
+        public static TestSimpleTimeable Empty(TlTime duration)
         {
             return new TestSimpleTimeable(duration, null);
         }
@@ -58,44 +56,13 @@ namespace CW.Core.Timeline.Tests
         }
     }
 
-    internal class TestCompletionPromise : ICompletionPromise
-    {
-        private event Action<TLTime> _subscription;
-
-        IDisposable ICompletionPromise.Subscribe(Action<TLTime> callback)
-        {
-            _subscription += callback;
-            return new Disposable(this, callback);
-        }
-
-        public void Finish(TLTime time)
-        {
-            _subscription?.Invoke(time);
-        }
-
-        private struct Disposable : IDisposable
-        {
-            private TestCompletionPromise _timeable;
-            private Action<TLTime> _subject;
-
-            public Disposable(TestCompletionPromise timeable, Action<TLTime> subject)
-            {
-                _timeable = timeable;
-                _subject = subject;
-            }
-
-            public void Dispose()
-            {
-                _timeable._subscription -= _subject;
-            }
-        }
-    }
-
-    internal class TestComposedTimeable  : Activity<TestComposedTimeable>, IComposedTimeable
+    internal class TestComposedTimeable  : Activity<TestComposedTimeable >, IComposedTimeable
     {
         private Action<TestComposedTimeable> action;
-        private TestCompletionPromise _promise = new TestCompletionPromise();
-        public ICompletionPromise CompletionPromise => _promise;
+
+
+        public CompletionPromise completionPromise = new CompletionPromise();
+        public ICompletionPromise CompletionPromise => completionPromise;
 
         private TestComposedTimeable(Action<TestComposedTimeable> action)
         {
@@ -115,11 +82,6 @@ namespace CW.Core.Timeline.Tests
         public override void Apply()
         {
             action?.Invoke(this);
-        }
-
-        public void Finish(TLTime time)
-        {
-            _promise.Finish(time);
         }
     }
 }

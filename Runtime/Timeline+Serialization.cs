@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
@@ -396,7 +396,7 @@ namespace CW.Core.Timeline.Serialization
         {
             var id = json["id"].ToObject<long>(serializer);
             var parentId = json["parent"].ToObject<string>(serializer);
-            var offset = json["offset"].ToObject<TLTime>(serializer);
+            var offset = json["offset"].ToObject<TlTime>(serializer);
 
             if (hasExistingValue)
             {
@@ -643,7 +643,7 @@ namespace CW.Core.Timeline.Serialization
 
             var timeable = json["timeable"].ToObject<ITimeable>(serializer);
 
-            var pushInfo = new PushInfo(timeable);
+            var pushInfo = new PushInfo(timeable, ctx.GetGlobal().APushInfoPoolingContext);
 
             int i = 0;
             foreach (JObject jTimeline in (json["timelinesTravelled"] as JArray))
@@ -656,18 +656,18 @@ namespace CW.Core.Timeline.Serialization
         }
     }
 
-    public class TLTimeConverter : JsonConverter<TLTime>
+    public class TLTimeConverter : JsonConverter<TlTime>
     {
-        public override void WriteJson(JsonWriter writer, TLTime value, JsonSerializer serializer)
+        public override void WriteJson(JsonWriter writer, TlTime value, JsonSerializer serializer)
         {
             writer.WriteValue(value.ToMilliseconds);
         }
 
-        public override TLTime ReadJson(JsonReader reader, Type objectType, TLTime existingValue, bool hasExistingValue,
+        public override TlTime ReadJson(JsonReader reader, Type objectType, TlTime existingValue, bool hasExistingValue,
             JsonSerializer serializer)
         {
             var longValue = JToken.ReadFrom(reader).ToObject<long>();
-            return TLTime.FromMilliseconds(longValue);
+            return TlTime.FromMilliseconds(longValue);
         }
     }
 
@@ -808,7 +808,7 @@ namespace CW.Core.Timeline.Serialization
             };
             timeline._options = options;
             timeline._lastID = json["lastID"].ToObject<long>();
-            timeline._time = json["time"].ToObject<TLTime>(serializer);
+            timeline._time = json["time"].ToObject<TlTime>(serializer);
 
             var activities = json["activities"].ToObject<List<ITimeable>>(serializer);
             foreach (var activity in activities)

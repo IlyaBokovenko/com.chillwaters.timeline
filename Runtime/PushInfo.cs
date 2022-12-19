@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 using CW.Core.Hash;
-using CW.Extensions.Pooling;
 using Newtonsoft.Json;
+using CW.Extensions.Pooling;
 
 namespace CW.Core.Timeline
 {
@@ -11,13 +11,13 @@ namespace CW.Core.Timeline
     {
         public readonly ITimeable timeable;
         internal Dictionary<ITimeline, int> timelinesTravelled;
+        private GlobalTimeline.PushInfoPoolingContext _poolingContext;
 
-        public PushInfo(ITimeable timeable) : this()
+        public PushInfo(ITimeable timeable, GlobalTimeline.PushInfoPoolingContext context) : this()
         {
-            GlobalTimeline.EnsurePools();
-            
             this.timeable = timeable;
-            timelinesTravelled = s_timelinesTravelledPool.Spawn();
+            _poolingContext = context;
+            timelinesTravelled =  _poolingContext.timelinesTravelledPool.Spawn();
         }
 
         public void TravelThrough(ITimeline timeline)
@@ -50,24 +50,11 @@ namespace CW.Core.Timeline
 #endregion
 
 #region pooling
-
-        private static IMemoryPool<Dictionary<ITimeline, int>> s_timelinesTravelledPool;
-
-        private static ITimeline[] s_hashHelperArray = new ITimeline[50];
-
-        internal static void EnsurePools(TimelinePoolingPolicy.CollectionPoolPolicy policy)
-        {
-            if (s_timelinesTravelledPool == null)
-            {
-                s_timelinesTravelledPool = DictionaryPool2<ITimeline, int>.Create(policy.PoolSettings, policy.CollectionCapacity).Labeled("s_timelinesTravelledPool");
-            }
-        }
-
         public void Dispose()
         {
             if (timelinesTravelled != null)
             {
-                s_timelinesTravelledPool.Despawn(timelinesTravelled);
+                _poolingContext.timelinesTravelledPool.Despawn(timelinesTravelled);
                 timelinesTravelled = null;
             }
         }
@@ -78,21 +65,21 @@ namespace CW.Core.Timeline
         {
             writer.Trace("timelines");
 
-            if (s_hashHelperArray.Length < timelinesTravelled.Count)
+            if (_poolingContext.hashHelperArray.Length < timelinesTravelled.Count)
             {
-                s_hashHelperArray = new ITimeline[timelinesTravelled.Count];
+                _poolingContext.hashHelperArray = new ITimeline[timelinesTravelled.Count];
             }
 
             foreach (var pair in timelinesTravelled)
             {
-                s_hashHelperArray[pair.Value] = pair.Key;
+                _poolingContext.hashHelperArray[pair.Value] = pair.Key;
             }
 
             using (writer.IndentationBlock())
             {
                 for (int level = 0; level < timelinesTravelled.Count; level++)
                 {
-                    var tl = s_hashHelperArray[level];
+                    var tl = _poolingContext.hashHelperArray[level];
                     var line = writer.Trace($"level").Write(level).Trace("timeline");
                     if (tl is LocalTimeline localTimeline)
                     {

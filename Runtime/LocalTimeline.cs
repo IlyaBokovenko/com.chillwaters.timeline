@@ -7,16 +7,16 @@ namespace CW.Core.Timeline
     public class LocalTimeline : Timeline, IContentHash
     {
         internal ITimelineInternal _parent;
-        internal TLTime _offset;
+        internal TlTime _offset;
         public ITimelineInternal parent => _parent;
-        public TLTime offset => _offset;
+        public TlTime offset => _offset;
         protected override IGlobalTimeline AGlobalTimeline => parent is GlobalTimeline globalTimeline ? globalTimeline : parent.AGlobalTimeline; 
 
         internal long _timeableId;
         private ITimeable dbgParentTimeable;
         public long TimeableId => _timeableId;
 
-        internal LocalTimeline(ITimelineInternal parent, TLTime offset, long timeableId)
+        internal LocalTimeline(ITimelineInternal parent, TlTime offset, long timeableId)
         {
             this._timeableId = timeableId;
             this._parent = parent;
@@ -33,17 +33,17 @@ namespace CW.Core.Timeline
             return dbgParentTimeable;
         }
 
-        public override TLTime Offset(ITimeable timeable)
+        public override TlTime Offset(ITimeable timeable)
         {
             return parent.Offset(timeable) - offset;
         }
 
-        public override TLTime Offset()
+        public override TlTime Offset()
         {
             return parent.Offset() + offset;
         }
 
-        public override TLTime Offset(TLTime globalTime)
+        public override TlTime Offset(TlTime globalTime)
         {
             return globalTime - Offset();
         }
@@ -63,7 +63,7 @@ namespace CW.Core.Timeline
             return base.ToString();
         }
 
-        protected override void PushToGlobal(PushInfo push, TLTime offset, Action<ITimeable> onPushed)
+        protected override void PushToGlobal(PushInfo push, TlTime offset, Action<ITimeable> onPushed)
         {
             parent.PushToGlobal(push, this.offset + offset, onPushed);
         }

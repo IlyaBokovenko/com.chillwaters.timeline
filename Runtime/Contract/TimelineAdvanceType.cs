@@ -1,4 +1,4 @@
-﻿namespace CW.Core.Timeline
+namespace CW.Core.Timeline
 {
 
     public enum TimelineAdvanceType

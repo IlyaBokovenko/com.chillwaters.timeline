@@ -1,34 +1,29 @@
-﻿using System;
+using System;
 using System.Globalization;
 
 namespace CW.Core.Timeline
 {
-    public struct TLTime : IComparable<TLTime>
+    public struct TlTime : IComparable<TlTime>
     {
         long _value;
     
-        public static TLTime Zero => new TLTime(0L);
+        public static TlTime Zero => new TlTime(0L);
     
         public long ToMilliseconds => _value;
         public float ToSeconds => (float) ((double) _value / 1000);
 
-        TLTime(long value)
+        TlTime(long value)
         {
             _value = value;
         }
-        public static TLTime FromSeconds(float value)
+        public static TlTime FromSeconds(float value)
         {
-            return new TLTime((long) ((double)value * 1000));
-        }
-        
-        public static TLTime FromSeconds(decimal value)
-        {
-            return new TLTime((long) ((double)value * 1000));
+            return new TlTime((long) ((double)value * 1000));
         }
     
-        public static TLTime FromMilliseconds(long value)
+        public static TlTime FromMilliseconds(long value)
         {
-            return new TLTime(value);
+            return new TlTime(value);
         }
 
         public override string ToString()
@@ -38,52 +33,42 @@ namespace CW.Core.Timeline
 
         #region math
 
-        public static bool operator >(TLTime a, TLTime b)
+        public static bool operator >(TlTime a, TlTime b)
         {
             return a._value > b._value;
         }
 
-        public static bool operator <(TLTime a, TLTime b)
+        public static bool operator <(TlTime a, TlTime b)
         {
             return a._value < b._value;
         }
     
-        public static bool operator >=(TLTime a, TLTime b)
+        public static bool operator >=(TlTime a, TlTime b)
         {
             return a._value >= b._value;
         }
 
-        public static bool operator <=(TLTime a, TLTime b)
+        public static bool operator <=(TlTime a, TlTime b)
         {
             return a._value <= b._value;
         }
 
-        public static TLTime operator +(TLTime a, TLTime b)
+        public static TlTime operator +(TlTime a, TlTime b)
         {
-            return new TLTime(a._value + b._value);
+            return new TlTime(a._value + b._value);
         }
 
-        public static TLTime operator *(TLTime a, int b)
+        public static TlTime operator -(TlTime a, TlTime b)
         {
-            return new TLTime(a._value * b);
-        }
-        
-        public static TLTime operator *(int b, TLTime a)
-        {
-            return new TLTime(a._value * b);
+            return new TlTime(a._value - b._value);
         }
 
-        public static TLTime operator -(TLTime a, TLTime b)
-        {
-            return new TLTime(a._value - b._value);
-        }
-
-        public static bool operator ==(TLTime a, TLTime b)
+        public static bool operator ==(TlTime a, TlTime b)
         {
             return a._value == b._value;
         }
 
-        public static bool operator !=(TLTime a, TLTime b)
+        public static bool operator !=(TlTime a, TlTime b)
         {
             return !(a == b);
         }
@@ -116,7 +101,7 @@ namespace CW.Core.Timeline
 
         #region equality & comparison
 
-        public int CompareTo(TLTime other)
+        public int CompareTo(TlTime other)
         {
             return _value.CompareTo(other._value);
         }
@@ -125,7 +110,7 @@ namespace CW.Core.Timeline
         {
             switch (obj)
             {
-                case TLTime other:
+                case TlTime other:
                     return _value == other._value;
                 // case float fl:
                 //     return ToSeconds == fl;
@@ -148,17 +133,17 @@ namespace CW.Core.Timeline
 
     public static class TLTimeExtensions
     {
-        public static TLTime TLMilliseconds(this long val)
+        public static TlTime TLMilliseconds(this long val)
         {
-            return TLTime.FromMilliseconds(val);
+            return TlTime.FromMilliseconds(val);
         }
     
-        public static TLTime TLSeconds(this float val)
+        public static TlTime TLSeconds(this float val)
         {
-            return TLTime.FromSeconds(val);
+            return TlTime.FromSeconds(val);
         }
 
-        public static string ToString(this TLTime tlTime, CultureInfo _)
+        public static string ToString(this TlTime tlTime, CultureInfo _)
         {
             return tlTime.ToString();
         }

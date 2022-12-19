@@ -5,10 +5,12 @@ using System.Linq;
 using CW.Core.Hash;
 using CW.Extensions.Pooling;
 using Newtonsoft.Json;
+
+#if TIMELINE_UNITY_LOGS
 using UnityEngine;
+#endif
 
 [assembly:System.Runtime.CompilerServices.InternalsVisibleTo("Unity.Timeline.EditorTests")]
-[assembly:System.Runtime.CompilerServices.InternalsVisibleTo("_Project.EditorTests")]
 
 namespace CW.Core.Timeline
 {
@@ -37,14 +39,7 @@ namespace CW.Core.Timeline
                 PushInfosPolicy = new CollectionPoolPolicy{PoolSettings =  new MemoryPoolSettings {ExpandMethod = PoolExpandMethods.Double, InitialSize = 1000}, CollectionCapacity = 50},
             };
 
-        public static readonly TimelinePoolingPolicy Default =
-            new TimelinePoolingPolicy
-        {
-            SubscriptionListsPolicy = new CollectionPoolPolicy{PoolSettings =  new MemoryPoolSettings {ExpandMethod = PoolExpandMethods.Double, InitialSize = 10}, CollectionCapacity = 20},
-            SubscriptionBigListsPolicy = new CollectionPoolPolicy{PoolSettings = new MemoryPoolSettings {ExpandMethod = PoolExpandMethods.Double, InitialSize = 1}, CollectionCapacity = 10},
-            SubscriptionDictionariesPolicy = new CollectionPoolPolicy{PoolSettings =  new MemoryPoolSettings {ExpandMethod = PoolExpandMethods.Double, InitialSize = 1}, CollectionCapacity = 10},
-            PushInfosPolicy = new CollectionPoolPolicy{PoolSettings =  new MemoryPoolSettings {ExpandMethod = PoolExpandMethods.Double, InitialSize = 10000}, CollectionCapacity = 10},
-        };
+        public static readonly TimelinePoolingPolicy Default = Server;
 
         public struct CollectionPoolPolicy
         {
@@ -70,11 +65,21 @@ namespace CW.Core.Timeline
         static readonly string ungroupedKey = Guid.NewGuid().ToString();
         
         // pooling
-        private static IMemoryPool<List<Subscription>> s_poolSubscriptionLists; 
-        private static IMemoryPool<Dictionary<string, List<Subscription>>> s_poolSubscriptionDictionaries; 
-        private static IMemoryPool<List<Subscription>> s_poolSubscriptionBigLists; 
+        private static TimelinePoolingPolicy? s_poolingPolicy;
+        private IMemoryPool<List<Subscription>> _poolSubscriptionLists;
+        private IMemoryPool<Dictionary<string, List<Subscription>>> _poolSubscriptionDictionaries;
+        private IMemoryPool<List<Subscription>> _poolSubscriptionBigLists;
+        public class PushInfoPoolingContext
+        {
+            public IMemoryPool<Dictionary<ITimeline, int>> timelinesTravelledPool;
+            public ITimeline[] hashHelperArray;
+        }
+        private PushInfoPoolingContext _pushInfoPoolingContext;
+        public PushInfoPoolingContext APushInfoPoolingContext => _pushInfoPoolingContext;
         
         public event Action OnApplied;
+        public event Action PreAdvance;
+        public event Action<TlTime> PostAdvance;
         
         internal long _lastID;
 
@@ -83,7 +88,7 @@ namespace CW.Core.Timeline
 
         internal List<TimedTimeable> _timeline;
         List<TimedTimeable> _unappliedActivities;
-        Dictionary<ITimeable, TLTime> _activityOffsets;
+        Dictionary<ITimeable, TlTime> _activityOffsets;
         internal Dictionary<ITimeable, PushInfo> _pushInfos;
 
         internal Dictionary<Type, List<Subscription>> _typeHandlers;
@@ -95,8 +100,8 @@ namespace CW.Core.Timeline
 
         internal Options _options;
         
-        internal TLTime _time;
-        public TLTime Now => _time;
+        internal TlTime _time;
+        public TlTime Now => _time;
 
         public bool IsAdvanceable => _options.AdvanceType == TimelineAdvanceType.Manual;
 
@@ -106,40 +111,38 @@ namespace CW.Core.Timeline
         {
             _capacity = capacity;
             _options = options;
-            _time = TLTime.FromMilliseconds(_options.AdvanceType == TimelineAdvanceType.Manual ? 0L : long.MaxValue);
+            _time = TlTime.FromMilliseconds(_options.AdvanceType == TimelineAdvanceType.Manual ? 0l : long.MaxValue);
             Clear();
+            if (s_poolingPolicy == null)
+            {
+                throw new TimelineException("Pools not set");
+            }
+            CreatePools(s_poolingPolicy.Value);
+        }
+        
+        public static void SetPoolingPolicy(TimelinePoolingPolicy policy)
+        {
+            s_poolingPolicy = policy;
         }
 
-        public static void EnsurePools(TimelinePoolingPolicy policy)
+        private void CreatePools(TimelinePoolingPolicy policy)
         {
-            if (s_poolSubscriptionLists == null)
-            {
-                var p = policy.SubscriptionListsPolicy;
-                s_poolSubscriptionLists = ListPool2<Subscription>.Create(p.PoolSettings, p.CollectionCapacity).Labeled("s_poolSubscriptionLists");
-            }
+            var p = policy.SubscriptionListsPolicy;
+            _poolSubscriptionLists = ListPool2<Subscription>.Create(p.PoolSettings, p.CollectionCapacity).Labeled("_poolSubscriptionLists");
 
-            if (s_poolSubscriptionDictionaries == null)
-            {
-                var p = policy.SubscriptionDictionariesPolicy;
-                s_poolSubscriptionDictionaries = DictionaryPool2<string, List<Subscription>>.Create(p.PoolSettings, p.CollectionCapacity).Labeled("s_poolSubscriptionDictionaries");
-            }
+            p = policy.SubscriptionDictionariesPolicy;
+            _poolSubscriptionDictionaries = DictionaryPool2<string, List<Subscription>>.Create(p.PoolSettings, p.CollectionCapacity).Labeled("_poolSubscriptionDictionaries");
 
-            if (s_poolSubscriptionBigLists == null)
-            {
-                var p = policy.SubscriptionBigListsPolicy;
-                s_poolSubscriptionBigLists = ListPool2<Subscription>.Create(p.PoolSettings, p.CollectionCapacity).Labeled("s_poolSubscriptionBigLists");
-            }
-            
-            PushInfo.EnsurePools(policy.PushInfosPolicy);
-        }
+            p = policy.SubscriptionBigListsPolicy;
+            _poolSubscriptionBigLists = ListPool2<Subscription>.Create(p.PoolSettings, p.CollectionCapacity).Labeled("_poolSubscriptionBigLists");
 
-        internal static void EnsurePools()
-        {
-            if (s_poolSubscriptionLists == null)
+            p = policy.PushInfosPolicy;
+            _pushInfoPoolingContext = new PushInfoPoolingContext
             {
-                Debug.Log("GlobalTimeline: pools not initialized");
-                EnsurePools(TimelinePoolingPolicy.Default);
-            }
+                timelinesTravelledPool = DictionaryPool2<ITimeline, int>.Create(p.PoolSettings, p.CollectionCapacity)
+                    .Labeled("_timelinesTravelledPool"),
+                hashHelperArray = new ITimeline[50]
+            };
         }
 
         internal void Reconstruct()
@@ -187,17 +190,17 @@ namespace CW.Core.Timeline
             return (T)ActivityById(id);
         }
 
-        public override TLTime Offset()
+        public override TlTime Offset()
         {
-            return TLTime.Zero;
+            return TlTime.Zero;
         }
 
-        public override TLTime Offset(ITimeable timeable)
+        public override TlTime Offset(ITimeable timeable)
         {
             return _activityOffsets[timeable];
         }
 
-        public override TLTime Offset(TLTime globalTime)
+        public override TlTime Offset(TlTime globalTime)
         {
             return globalTime;
         }
@@ -211,10 +214,10 @@ namespace CW.Core.Timeline
         public void PurgeAll()
         {
             _unappliedActivities.Clear();
-            PurgeActivities(TLTime.FromMilliseconds(long.MaxValue));
+            PurgeActivities(TlTime.FromMilliseconds(long.MaxValue));
         }
 
-        public void Purge(TLTime time)
+        public void Purge(TlTime time)
         {
             if (_unappliedActivities.Any())
             {
@@ -232,7 +235,9 @@ namespace CW.Core.Timeline
             int nCollected;
             while ((nCollected = GCCycle()) > 0)
             {
+#if TIMELINE_UNITY_LOGS                
                 Debug.Log($"Timeline GC cycle. Collected {nCollected} activities");
+#endif
                 // var after = s.Serialize(this);
                 // Log.Info($"before:\n{before}");
                 // Log.Info($"after:\n{after}");
@@ -337,7 +342,7 @@ namespace CW.Core.Timeline
 
         //HashSet<Subscription> oldSubscription = new HashSet<Subscription>();
 
-        void PurgeActivities(TLTime time)
+        void PurgeActivities(TlTime time)
         {
             var now = time;
             var i = ~_timeline.BinarySearch(new TimedTimeable(now, null), insertBefore);
@@ -357,7 +362,7 @@ namespace CW.Core.Timeline
             //{
             //    var descr = string.Join("\n", diff);
             //    descr = "Accumulated subscriptions:\n" + descr;
-            //    MIB.Log.Error(descr, LogTag.Timeline);
+            //    Debug.LogError(descr);
             //}
             //oldSubscription = newSubscriptions;
         }
@@ -499,20 +504,20 @@ namespace CW.Core.Timeline
             }
         }
 
-        protected override void PushToGlobal(PushInfo push, TLTime offset, Action<ITimeable> onPushed)
+        protected override void PushToGlobal(PushInfo push, TlTime offset, Action<ITimeable> onPushed)
         {
             PushCore(push, offset, onPushed);
             EnsureDraining(_time);
         }
 
-        public IEnumerator PushIteration(ITimeable timeable, TLTime offset)
+        public IEnumerator PushIteration(ITimeable timeable, TlTime offset)
         {
             _drainIterator = DrainIteration(_time);
             Push(timeable, offset);
             return _drainIterator;
         }
 
-        private void PushCore(PushInfo push, TLTime offset, Action<ITimeable> onPushed)
+        private void PushCore(PushInfo push, TlTime offset, Action<ITimeable> onPushed)
         {
             var timeable = push.timeable;
 
@@ -545,7 +550,7 @@ namespace CW.Core.Timeline
             onPushed?.Invoke(timeable);
         }
 
-        private void EnsureDraining(TLTime tillTime)
+        private void EnsureDraining(TlTime tillTime)
         {
             if (_drainIterator == null)
             {
@@ -556,7 +561,7 @@ namespace CW.Core.Timeline
             }
         }
 
-        private IEnumerator DrainIteration(TLTime tillTime)
+        private IEnumerator DrainIteration(TlTime tillTime)
         {
             while (_unappliedActivities.Count > 0)
             {
@@ -581,20 +586,18 @@ namespace CW.Core.Timeline
 
         void Publish(ITimeable timeable)
         {
-            EnsurePools();
-            
             using (var dispose = DisposeBlock.Spawn())
             {
                 var grouped = SubscriptionsGroupedBySubsystem(dispose, timeable);
                 var pushInfo = _pushInfos[timeable];
-                var subsToCall = dispose.Spawn(s_poolSubscriptionBigLists);
+                var subsToCall = dispose.Spawn(_poolSubscriptionBigLists);
                 foreach (var group in grouped)
                 {
                     if (group.Key == ungroupedKey)
                     {
                         subsToCall.AddRange(group.Value);
                     }
-                    else
+                    else if (!_areSubsystemsDisabled)
                     {
                         int deepestLevel = 0;
                         Subscription deepest = null;
@@ -636,8 +639,6 @@ namespace CW.Core.Timeline
         
         Dictionary<string, List<Subscription>> SubscriptionsGroupedBySubsystem(DisposeBlock dispose, ITimeable timeable)
         {
-            EnsurePools();
-            
             var pushInfo = _pushInfos[timeable];
             
             // залипуха
@@ -651,7 +652,7 @@ namespace CW.Core.Timeline
                 tp = completed.InterfaceType;
             }
             
-            var subscriptions = dispose.Spawn(s_poolSubscriptionLists);
+            var subscriptions = dispose.Spawn(_poolSubscriptionLists);
             if (_typeHandlers.TryGetValue(tp, out List<Subscription> tmp))
             {
                 subscriptions.AddRange(tmp);
@@ -662,7 +663,7 @@ namespace CW.Core.Timeline
                 subscriptions.AddRange(tmp);
             }
 
-            var dict = dispose.Spawn(s_poolSubscriptionDictionaries);
+            var dict = dispose.Spawn(_poolSubscriptionDictionaries);
             foreach (var subscription in subscriptions)
             {
                 if(!pushInfo.InMyLocality(subscription))
@@ -671,7 +672,7 @@ namespace CW.Core.Timeline
                 var key = subscription.subsystem ?? ungroupedKey;
                 if (!dict.TryGetValue(key, out var subsystemSubscriptions))
                 {
-                    subsystemSubscriptions = dispose.Spawn(s_poolSubscriptionLists); 
+                    subsystemSubscriptions = dispose.Spawn(_poolSubscriptionLists); 
                     dict.Add(key, subsystemSubscriptions);
                 }
                 subsystemSubscriptions.Add(subscription);
@@ -743,8 +744,6 @@ namespace CW.Core.Timeline
 
         public override void Unsubscribe<T>(Action<T> action)
         {
-            EnsurePools();
-            
             bool ConditionToRemove(Subscription subs)
             {
                 return subs.IsMy(action);
@@ -754,7 +753,7 @@ namespace CW.Core.Timeline
 
             using(var dispose = DisposeBlock.Spawn())
             {
-                var toRemove = dispose.Spawn(s_poolSubscriptionLists);
+                var toRemove = dispose.Spawn(_poolSubscriptionLists);
                 
                 if (_typeHandlers.ContainsKey(key))
                 {
@@ -762,14 +761,15 @@ namespace CW.Core.Timeline
                     _typeHandlers[key].RemoveAll(ConditionToRemove);
                 }
 
-                var handlers = _instanceHandlers
+                var affectedSubscriptions = _instanceHandlers
                     .Where(pair => pair.Key.GetType() == key)
                     .Select(pair => pair.Value);
-                foreach (var list in handlers)
+                
+                foreach (var list in affectedSubscriptions)
                 {
                     toRemove.AddRange(list.Where(ConditionToRemove));
                     list.RemoveAll(ConditionToRemove);
-                };
+                }
 
                 RemoveFromOrder(toRemove);
             }
@@ -777,8 +777,6 @@ namespace CW.Core.Timeline
 
         public override void Unsubscribe<T>(T timeable, Action<T> action)
         {
-            EnsurePools();
-            
             bool ConditionToRemove(Subscription subs)
             {
                 return subs.Timeable == (ITimeable)timeable && subs.IsMy(action);
@@ -786,7 +784,7 @@ namespace CW.Core.Timeline
 
             using (var dispose = DisposeBlock.Spawn())
             {
-                var toRemove = dispose.Spawn(s_poolSubscriptionLists);
+                var toRemove = dispose.Spawn(_poolSubscriptionLists);
                 foreach (var subscription in _instanceHandlers[timeable])
                 {
                     if (ConditionToRemove(subscription))
@@ -809,7 +807,7 @@ namespace CW.Core.Timeline
             _drainIterator = null;
             _timeline = new List<TimedTimeable>(_capacity);
             _unappliedActivities = new List<TimedTimeable>(_capacity);
-            _activityOffsets = new Dictionary<ITimeable, TLTime>(_capacity);
+            _activityOffsets = new Dictionary<ITimeable, TlTime>(_capacity);
             _pushInfos = new Dictionary<ITimeable, PushInfo>(_capacity);
             _typeHandlers = new Dictionary<Type, List<Subscription>>(_capacity);
             _instanceHandlers = new Dictionary<ITimeable, List<Subscription>>(_capacity);
@@ -867,7 +865,9 @@ namespace CW.Core.Timeline
                     }
                     else if (_options.CheckForTimeParadoxes == CheckForTimeParadoxesEnum.CheckAndLog)
                     {
+#if TIMELINE_UNITY_LOGS
                         Debug.LogError(TimeParadoxException.CreateDescription(record, appliedActivitiesAfterRecord));
+#endif
                     }
                 }
             }
@@ -929,14 +929,16 @@ namespace CW.Core.Timeline
             }
         }
 
-        public void Advance(TLTime time)
+        public void Advance(TlTime time)
         {
+            PreAdvance?.Invoke();
             CheckManualMode();
             EnsureDraining(time);
             GC();
+            PostAdvance?.Invoke(time);
         }
 
-        public IEnumerator AdvanceIteration(TLTime time)
+        public IEnumerator AdvanceIteration(TlTime time)
         {
             CheckManualMode();
 
@@ -1017,10 +1019,10 @@ namespace CW.Core.Timeline
 
     public class Timed<T> : IContentHash
     {
-        public readonly TLTime offset;
+        public readonly TlTime offset;
         public readonly T value;
 
-        public Timed(TLTime offset, T value)
+        public Timed(TlTime offset, T value)
         {
             this.offset = offset;
             this.value = value;
@@ -1049,7 +1051,7 @@ namespace CW.Core.Timeline
     [JsonObject(MemberSerialization.Fields, IsReference = false)]
     public class TimedTimeable : Timed<ITimeable>  
     {
-        public TimedTimeable(TLTime offset, ITimeable value) : base(offset, value)
+        public TimedTimeable(TlTime offset, ITimeable value) : base(offset, value)
         {
         }
     }
@@ -1075,7 +1077,7 @@ namespace CW.Core.Timeline
 
     internal static class TimedExtension
     {
-        public static Timed<T> Timed<T>(this T value, TLTime offset)
+        public static Timed<T> Timed<T>(this T value, TlTime offset)
         {
             return new Timed<T>(offset, value);
         }

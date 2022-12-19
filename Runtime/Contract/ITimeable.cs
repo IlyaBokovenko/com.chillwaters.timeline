@@ -22,12 +22,12 @@ namespace CW.Core.Timeline
 
     public interface ISimpleTimeable : ITimeable
     {
-        TLTime Duration { get; }
+        TlTime Duration { get; }
     }
 
     public interface ICompletionPromise
     {
-        IDisposable Subscribe(Action<TLTime> callback);
+        IDisposable Subscribe(Action<TlTime> callback);
     }
 
     public interface IComposedTimeable : ITimeable

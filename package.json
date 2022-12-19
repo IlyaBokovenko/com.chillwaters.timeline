@@ -5,9 +5,6 @@
   "description": "Highly optimized implementation of timeline - a stream of interdependent events in time. Hybrid of scheduler and message bus",
   "unity": "2019.4",
   "unityRelease": "18f1",
-  "dependencies": {
-    "jillejr.newtonsoft.json-for-unity": "12.0.301"
-  },
   "author": {
     "name": "Ilya Bokovenko",
     "email": "chill.waters@gmail.com"

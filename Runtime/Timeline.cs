@@ -5,9 +5,9 @@ namespace CW.Core.Timeline
 {
     public abstract class Timeline : ITimelineInternal, ITimeline
     {
-        public abstract TLTime Offset();
-        public abstract TLTime Offset(ITimeable timeable);
-        public abstract TLTime Offset(TLTime globalTime);
+        public abstract TlTime Offset();
+        public abstract TlTime Offset(ITimeable timeable);
+        public abstract TlTime Offset(TlTime globalTime);
 
         public void Subscribe<T>(Action<T> action, string subsystem = null) where T : ITimeable
         {
@@ -27,14 +27,14 @@ namespace CW.Core.Timeline
 
         public abstract void Unsubscribe<T>(T timeable, Action<T> action) where T : ITimeable;
 
-        public TLTime ToTimeline(ITimeline other, TLTime myTime)
+        public TlTime ToTimeline(ITimeline other, TlTime myTime)
         {
             return Offset() - other.Offset() + myTime;
         }
 
-        public void Push(ITimeable timeable, TLTime offset)
+        public void Push(ITimeable timeable, TlTime offset)
         {
-            var push = new PushInfo(timeable);
+            var push = new PushInfo(timeable, ((GlobalTimeline)AGlobalTimeline).APushInfoPoolingContext);
             ((ITimelineInternal)this).PushToGlobal(push, offset, ProcessPushed);
         }
 
@@ -94,9 +94,9 @@ namespace CW.Core.Timeline
             Unsubscribe(timeable, PushCompletionMarker);
         }
 
-        protected abstract void PushToGlobal(PushInfo push, TLTime offset, Action<ITimeable> onPushed);
+        protected abstract void PushToGlobal(PushInfo push, TlTime offset, Action<ITimeable> onPushed);
 
-        void ITimelineInternal.PushToGlobal(PushInfo push, TLTime offset, Action<ITimeable> onPushed)
+        void ITimelineInternal.PushToGlobal(PushInfo push, TlTime offset, Action<ITimeable> onPushed)
         {
             push.TravelThrough(this);
             PushToGlobal(push, offset, onPushed);
