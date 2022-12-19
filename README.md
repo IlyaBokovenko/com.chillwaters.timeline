@@ -19,6 +19,7 @@ There is an Example package in package root folder Packages/CW Timeline
 Import it in the project and select menu CW Timeline / Open Timeline Visualizer
 
 You'll see a window with a visualization of example timeline. It demonstrates various activities hierarchy with durations, labels and timecodes
+
 In this window you can:
 * Click on activity to see it's relations
 * Use search field to search activity by description
