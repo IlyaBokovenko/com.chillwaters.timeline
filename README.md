@@ -10,28 +10,7 @@ Timeline was developed as a part of core tech in [Match2](https://www.gamedevelo
 * Supports state hash calculation. Timeline supports interfaces for hashing it's state and state of it's activities. Also some efforts are put to simplify tracing of hash mismatches.
 * Server-friendly. Due to the features stated above Timeline can be used on server side and keep it synchronized with client.
 # Installation #
-* Open project manifest file Packages\manifest.json
-* Add newtonsoft registry to "scopedRegistries" node. If no "scopedRegistries" node, create one:
-```json
-"scopedRegistries": [
-  {
-    "name": "Packages from jillejr",
-    "url": "https://npm.cloudsmith.io/jillejr/newtonsoft-json-for-unity/",
-    "scopes": [
-      "jillejr"
-
-    ]
-  }
-],
-```
-* Add [core-hash](https://github.com/IlyaBokovenko/core-hash.git), [core-pools](https://github.com/IlyaBokovenko/core-pools.git) and [core-timeline](https://github.com/IlyaBokovenko/core-timeline.git) packages in "dependencies" node:
-```json
-  "dependencies": {
-    "com.chillwaters.hash": "git@github.com:IlyaBokovenko/core-hash.git",
-    "com.chillwaters.pools": "git@github.com:IlyaBokovenko/core-pools.git",
-    "com.chillwaters.timeline": "git@github.com:IlyaBokovenko/core-timeline.git",
-```
-*P.S. Yes, I know, there are GitHub Packages and other NPM registries exist, which allow to pull dependencies along with the main package. But as long as GitHub Packages require authentication even for public repos, this stays a simpliest installation procedure*
+* Use Unity Package Manager to add package using Git URL
 
 # Usage #
 ## Basic Concepts ##
