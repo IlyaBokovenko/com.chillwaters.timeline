@@ -9,6 +9,7 @@ Timeline was developed as a part of core tech in [Match2](https://www.gamedevelo
 * Serialized. Thanks to Newtonsoft.Json serializer complemented with a couple of custom [Json converters](Runtime/Timeline+Serialization.cs), Timeline is serializable to optimized and human-readable json format. Being deserialized, Timeline copy is an exact copy of it's originator.
 * Supports state hash calculation. Timeline supports interfaces for hashing it's state and state of it's activities. Also some efforts are put to simplify tracing of hash mismatches.
 * Server-friendly. Due to the features stated above Timeline can be used on server side and keep it synchronized with client.
+* Visualization tool to analyze activity chains (See [Example](#example) section)
 # Installation #
 * Use Unity Package Manager to add package using Git URL
 
@@ -190,7 +191,6 @@ There is an init option *CheckForTimeParadoxes* of **GlobalTimeline**. Usually i
 # Known Limitations #
 * Due to its design Timeline pre-simulates a huge activities flow in a single Push call. Although Timeline internals are greatly optimized, it still may cause a significant CPU/Memory spike in case modelled process is too complex. So, probably, it's not good idea to use Timeline in environments requiring stable FPS, or use it in a background thread. You can mitigate CPU spikes though by using [PushIteration](Runtime/GlobalTimeline.cs), which spreads the work overall several steps. 
 * Without **Purge** Timeline will grow in memory quickly. So it's client responsibility to periodically clean Timeline from obsolete activities.
-* Large activities flow may be hard to analyze and debug. I'm currently writing a visual tool for this but it's not ready for release yet.
 
 # To be done #
 * Polymorpic subscriptions. Subscription to parent class catches derived activities
